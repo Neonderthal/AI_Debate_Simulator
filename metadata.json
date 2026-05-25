@@ -1,0 +1,6 @@
+{
+  "name": "AI Debate Simulator",
+  "description": "Interactive dual-AI academic debate simulator that supports multiple duration limits (Flash, Pro, Ultra), chaotic mode arguments, live balanced scoring with fallacies, and custom real-time participant interjection.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
