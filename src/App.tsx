@@ -1,29 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  MessageSquare,
-  Play,
-  Pause,
-  RotateCcw,
-  Settings,
-  Send,
-  Sparkles,
-  Trophy,
-  Scale,
-  Activity,
-  AlertTriangle,
-  History,
-  TrendingUp,
-  User,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle,
-  BrainCircuit,
-  Clock,
-  Volume2,
-  VolumeX,
-  Speaker,
-} from "lucide-react";
+import { MessageSquare, Play, Pause, RotateCcw, Settings, Send, Sparkles, Trophy, Scale, Activity, TriangleAlert as AlertTriangle, History, TrendingUp, User, ArrowRight, ShieldCheck, CircleCheck as CheckCircle, BrainCircuit, Clock, Volume2, VolumeX, Speaker } from "lucide-react";
 import { DebateDurationMode, Turn, SummaryReport, DebateSettings } from "./types";
 import TopicSelector from "./components/TopicSelector";
 import ScoreScale from "./components/ScoreScale";
@@ -130,6 +107,7 @@ export default function App() {
       text,
       speaker,
       { ...ttsConfig, enabled: settings.ttsEnabled },
+      durationMode,
       () => setIsSpeakingNow(true),
       () => setIsSpeakingNow(false),
       (err) => console.error("TTS error:", err)
@@ -155,10 +133,10 @@ export default function App() {
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     if (isAutoPlaying && !isGenerating && activeTopic && !summaryReport) {
-      // Delay slightly between turn updates for realistic study reading
+      // Delay between turn updates - longer in slower modes to allow TTS to complete
       timer = setTimeout(() => {
         triggerNextAiTurn();
-      }, 1500);
+      }, 3000);
     }
     return () => {
       if (timer) clearTimeout(timer);

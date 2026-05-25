@@ -4,6 +4,8 @@
  * Provides distinct voice characteristics for each AI agent
  */
 
+import { DebateDurationMode } from '../types';
+
 export interface TTSConfig {
   enabled: boolean;
   proVoice: string | null;
@@ -12,6 +14,15 @@ export interface TTSConfig {
   pitch: number;
   volume: number;
 }
+
+// TTS speed multipliers based on debate duration mode
+// Faster modes need faster TTS to finish reading before the next turn
+export const TTS_SPEED_BY_MODE: Record<DebateDurationMode, number> = {
+  flash: 1.4,   // Fast mode - speak quickly to keep up
+  pro: 1.1,     // Standard mode - slightly faster than normal
+  ultra: 0.9,   // Long mode - relaxed pace for deep listening
+  custom: 1.0,  // Custom mode - normal speed
+};
 
 // Voice profiles for Proponent (Aegis) and Opponent (Vesper)
 export const VOICE_PROFILES = {
@@ -126,6 +137,7 @@ export function speakText(
   text: string,
   speaker: 'pro' | 'con',
   config: TTSConfig,
+  durationMode: DebateDurationMode = 'pro',
   onStart?: () => void,
   onEnd?: () => void,
   onError?: (error: string) => void
@@ -169,9 +181,10 @@ export function speakText(
     utterance.voice = selectedVoice;
   }
 
-  // Apply voice characteristics
+  // Apply voice characteristics with mode-based speed adjustment
+  const modeSpeedMultiplier = TTS_SPEED_BY_MODE[durationMode];
   utterance.pitch = profile.pitch * config.pitch;
-  utterance.rate = profile.rate * config.rate;
+  utterance.rate = profile.rate * config.rate * modeSpeedMultiplier;
   utterance.volume = config.volume;
 
   // Event handlers
