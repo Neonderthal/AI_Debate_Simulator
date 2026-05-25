@@ -1,5 +1,3 @@
-# AIDebateSim
-AI powered debate simulator built with React, TypeScript and Google Gemini
 # AI Debate Arena 🎯
 
 A real-time AI-powered debate simulator where two AI agents argue opposing sides of any topic. Built with React, TypeScript, Express, and Google Gemini AI.
