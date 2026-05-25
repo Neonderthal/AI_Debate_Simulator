@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   MessageSquare,
@@ -20,11 +20,24 @@ import {
   CheckCircle,
   BrainCircuit,
   Clock,
+  Volume2,
+  VolumeX,
+  Speaker,
 } from "lucide-react";
 import { DebateDurationMode, Turn, SummaryReport, DebateSettings } from "./types";
 import TopicSelector from "./components/TopicSelector";
 import ScoreScale from "./components/ScoreScale";
 import SettingsModal from "./components/SettingsModal";
+import {
+  initializeTTS,
+  speakText,
+  stopSpeaking,
+  isSpeaking,
+  isTTSSupported,
+  getAvailableVoices,
+  detectOptimalVoices,
+  TTSConfig,
+} from "./utils/tts";
 
 export default function App() {
   // Topic state
@@ -43,8 +56,22 @@ export default function App() {
     aiStiffness: 40,
     speakerAegisVoice: "Academic, Formal, Empirical",
     speakerVesperVoice: "Skeptical, Analytical, Deep",
+    ttsEnabled: true,
+    ttsAutoRead: true,
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  // TTS state
+  const [ttsConfig, setTtsConfig] = useState<TTSConfig>({
+    enabled: true,
+    proVoice: null,
+    conVoice: null,
+    rate: 1.0,
+    pitch: 1.0,
+    volume: 1.0,
+  });
+  const [isTTSAvailable, setIsTTSAvailable] = useState<boolean>(false);
+  const [isSpeakingNow, setIsSpeakingNow] = useState<boolean>(false);
 
   // Simulation Running state
   const [history, setHistory] = useState<Turn[]>([]);
@@ -67,15 +94,57 @@ export default function App() {
 
   // UI status and animations refs
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize TTS on mount
+  useEffect(() => {
+    const initTTS = async () => {
+      await initializeTTS();
+      const supported = isTTSSupported();
+      setIsTTSAvailable(supported);
+
+      if (supported) {
+        const optimal = detectOptimalVoices();
+        setTtsConfig(prev => ({
+          ...prev,
+          proVoice: optimal.proVoice,
+          conVoice: optimal.conVoice,
+        }));
+      }
+    };
+    initTTS();
+  }, []);
+
+  // Track speaking state
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsSpeakingNow(isSpeaking());
+    }, 200);
+    return () => clearInterval(interval);
+  }, []);
+
+  // TTS speak function
+  const speakArgument = useCallback((text: string, speaker: "pro" | "con") => {
+    if (!settings.ttsEnabled || !isTTSAvailable) return;
+
+    speakText(
+      text,
+      speaker,
+      { ...ttsConfig, enabled: settings.ttsEnabled },
+      () => setIsSpeakingNow(true),
+      () => setIsSpeakingNow(false),
+      (err) => console.error("TTS error:", err)
+    );
+  }, [settings.ttsEnabled, ttsConfig, isTTSAvailable]);
+
   useEffect(() => {
   fetch("/api/health")
     .then(res => res.json())
     .then(data => {
       if (!data.hasApiKey) {
-        setGenerateError("⚠️ No API key configured on the server. Debates will not work.");
+        setGenerateError("No API key configured on the server. Debates will not work.");
       }
     })
-    .catch(() => setGenerateError("⚠️ Could not reach the server."));
+    .catch(() => setGenerateError("Could not reach the server."));
 }, []);
   // Auto-scroll on transcript edits
   useEffect(() => {
@@ -207,6 +276,11 @@ export default function App() {
       };
 
       setHistory((prev) => [...prev, newTurn]);
+
+      // Speak the new argument if TTS is enabled and auto-read is on
+      if (settings.ttsEnabled && settings.ttsAutoRead) {
+        speakArgument(turnResult.argument, currentSpeaker);
+      }
 
       // Adjust the balance score
       setBalanceScore((prev) => {
@@ -344,6 +418,38 @@ export default function App() {
 
         {/* Global Toolbar */}
         <div className="flex items-center gap-2" id="header-toolbar-box">
+          {activeTopic && isTTSAvailable && (
+            <button
+              onClick={() => {
+                if (isSpeakingNow) {
+                  stopSpeaking();
+                  setIsSpeakingNow(false);
+                } else {
+                  setSettings(prev => ({ ...prev, ttsEnabled: !prev.ttsEnabled }));
+                }
+              }}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-colors text-xs font-mono ${
+                settings.ttsEnabled
+                  ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-400"
+                  : "bg-stone-900 border-stone-800 text-stone-400 hover:text-white"
+              }`}
+              id="tts-toggle-btn"
+              title={settings.ttsEnabled ? "TTS enabled - click to disable" : "TTS disabled - click to enable"}
+            >
+              {isSpeakingNow ? (
+                <>
+                  <VolumeX className="h-3.5 w-3.5" />
+                  Stop
+                </>
+              ) : (
+                <>
+                  <Speaker className="h-3.5 w-3.5" />
+                  TTS
+                </>
+              )}
+            </button>
+          )}
+
           {activeTopic && (
             <button
               onClick={resetAll}
@@ -570,10 +676,23 @@ export default function App() {
                                   )}
                                 </div>
 
-                                <div className="flex items-center gap-2 text-[10px] font-mono text-stone-500">
-                                  <span>Turn #{index + 1}</span>
-                                  <span>•</span>
-                                  <span>{turn.timestamp}</span>
+                                <div className="flex items-center gap-2">
+                                  {/* TTS Replay Button */}
+                                  {!isUser && isTTSAvailable && settings.ttsEnabled && (
+                                    <button
+                                      onClick={() => speakArgument(turn.text, turn.speaker as "pro" | "con")}
+                                      className="p-1.5 rounded-md bg-stone-800/50 hover:bg-stone-700 text-stone-400 hover:text-white transition-all"
+                                      title={`Listen to ${turn.speakerName}'s argument`}
+                                    >
+                                      <Volume2 className="h-3 w-3" />
+                                    </button>
+                                  )}
+
+                                  <div className="flex items-center gap-2 text-[10px] font-mono text-stone-500">
+                                    <span>Turn #{index + 1}</span>
+                                    <span>•</span>
+                                    <span>{turn.timestamp}</span>
+                                  </div>
                                 </div>
                               </div>
 

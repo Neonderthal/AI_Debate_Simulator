@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { X, ShieldAlert, Zap, HelpCircle } from "lucide-react";
+import { X, ShieldAlert, Zap, Circle as HelpCircle, Volume2, VolumeX } from "lucide-react";
 import { DebateSettings } from "../types";
 
 interface SettingsModalProps {
@@ -29,6 +29,20 @@ export default function SettingsModal({
     setSettings({
       ...settings,
       chaoticMode: !settings.chaoticMode,
+    });
+  };
+
+  const toggleTTS = () => {
+    setSettings({
+      ...settings,
+      ttsEnabled: !settings.ttsEnabled,
+    });
+  };
+
+  const toggleAutoRead = () => {
+    setSettings({
+      ...settings,
+      ttsAutoRead: !settings.ttsAutoRead,
     });
   };
 
@@ -134,6 +148,80 @@ export default function SettingsModal({
                 />
               </div>
             </div>
+          </div>
+
+          {/* Text-to-Speech Settings */}
+          <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-950/20">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  {settings.ttsEnabled ? (
+                    <Volume2 className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <VolumeX className="h-4 w-4 text-stone-500" />
+                  )}
+                  <label className="text-sm font-medium text-emerald-400 font-sans">
+                    Text-to-Speech
+                  </label>
+                </div>
+                <p className="text-xs text-stone-400 leading-relaxed">
+                  Enable voice narration for AI arguments. Each speaker has a distinct voice profile for a more engaging debate experience.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={toggleTTS}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  settings.ttsEnabled ? "bg-emerald-600" : "bg-stone-700"
+                }`}
+                id="tts-toggle"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    settings.ttsEnabled ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {settings.ttsEnabled && (
+              <div className="mt-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-stone-300">Auto-read arguments</p>
+                    <p className="text-[10px] text-stone-500">Automatically speak new AI arguments during debate</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleAutoRead}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      settings.ttsAutoRead ? "bg-emerald-600" : "bg-stone-700"
+                    }`}
+                    id="auto-read-toggle"
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        settings.ttsAutoRead ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="bg-stone-900/50 p-3 rounded-lg border border-stone-800 text-[10px] text-stone-400">
+                  <p className="mb-1.5 font-medium text-stone-300">Voice Profiles:</p>
+                  <div className="flex gap-4">
+                    <div>
+                      <span className="text-emerald-400">{aegisName || "Aegis"}:</span>
+                      <span className="ml-1">Clear, warm, academic tone</span>
+                    </div>
+                    <div>
+                      <span className="text-red-400">{vesperName || "Vesper"}:</span>
+                      <span className="ml-1">Deep, authoritative, skeptical tone</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-stone-800/60 pt-4 space-y-3 text-xs text-stone-400 font-sans leading-relaxed">

@@ -35,4 +35,6 @@ export interface DebateSettings {
   aiStiffness: number; // 0 to 100
   speakerAegisVoice: string; // prebuilt voice config / style details
   speakerVesperVoice: string;
+  ttsEnabled: boolean; // Text-to-Speech toggle
+  ttsAutoRead: boolean; // Auto-read new AI arguments
 }
